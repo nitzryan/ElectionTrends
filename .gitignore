@@ -1,2 +1,4 @@
 *.csv
 analysis/*.json
+analysis/maps
+analysis/output
