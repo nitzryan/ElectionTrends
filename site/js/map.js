@@ -3,6 +3,8 @@ state_selected = ""
 zip = null
 county_map = null
 
+us_map_data = null
+
 async function GetMaps() {
     await fetch('data/states_data.json')
         .then(function (response) {
@@ -30,13 +32,15 @@ async function GetMaps() {
 async function CreateMap()
 {
     map_element = document.getElementById('map')
+    hover_element = document.getElementById('hover_info')
+    hover_children = hover_element.getElementsByTagName('div')
     shown_features = us_state_json.features.filter(f => f.properties.name != state_selected)
     const locations = shown_features.map(f => f.properties.name)
     const results = shown_features.map(f => f.properties.data[1]["R+"])
     us_state_json_copy = JSON.parse(JSON.stringify(us_state_json))
     us_state_json_copy.features = shown_features
 
-    let us_map_data = [{
+    us_map_data = [{
         type: "choropleth",
         geojson: us_state_json_copy,
         locations: locations,
@@ -58,7 +62,7 @@ async function CreateMap()
         }
         state_locations = selected_state_counties.features.map(f => f.properties.NAME)
         selected_state_counties.features.forEach(f => f.id = f.properties.NAME)
-        state_idxs = selected_state_counties.features.map((_, index) => index + 1)
+        state_idxs = selected_state_counties.features.map(f => 100 * (f.properties.data[5].rvotes - f.properties.data[5].dvotes) / (f.properties.data[5].totalvotes))
 
         us_map_data.push({
             type: "choropleth",
@@ -66,7 +70,9 @@ async function CreateMap()
             locations: state_locations,
             z: state_idxs,
             locationmode: "geojson-id",
-            colorscale: "Viridis",
+            colorscale: "RdBu",
+            zmin: -20,
+            zmax: 20,
             colorbar: {title: "County Number"},
         })
     }
@@ -81,7 +87,32 @@ async function CreateMap()
         height: 600
     }
 
-    Plotly.newPlot(map_element, us_map_data, us_map_layout)
+    Plotly.newPlot(map_element, us_map_data, us_map_layout, {displayModeBar: false})
+
+    map_element.on('plotly_hover', function(event) {
+        point = event.points[0]
+        point_index = point.pointIndex
+        let hover_offset = window.innerWidth / 20.0
+        //console.log(event)
+        if (point.fullData.name == "trace 0")
+        {
+            props = us_map_data[0].geojson.features[point_index].properties
+            data = props.data[0]
+            hover_children[0].innerHTML = `${props.name}`
+            hover_children[1].innerHTML = `R: ${data.RVotes} (${data["R%"].toFixed(1)}%)`
+            hover_children[2].innerHTML = `D: ${data.DVotes} (${data["D%"].toFixed(1)}%)`
+            hover_children[3].innerHTML = `${data["R+"] > 0 ? ("R+" + data["R+"].toFixed(1)) : ("D+" + -data["R+"].toFixed(1))}`
+
+            hover_element.style.left = `${event.event.x + hover_offset}px`
+            hover_element.style.top = `${event.event.y - hover_offset}px`
+            hover_element.style.display = 'block'
+        } else {
+
+        }
+        hover_element.classList.remove('hidden')
+    }).on('plotly_unhover', function(data) {
+            hover_element.classList.add('hidden')
+    })
 
     Plotly.react(map_element, us_map_data, us_map_layout).then(() => {
         map_element.on("plotly_click", (event) => {
