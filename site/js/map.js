@@ -4,30 +4,16 @@ zip = null
 county_map = null
 
 async function GetMaps() {
-    // const httpResponse = await fetch('')
-    // if (!httpResponse.ok) {
-    //     throw new Error(`Failed to get file ${httpResponse.statusText}`)
-    // }
-    
-    await fetch('data/US.zip')
-        .then(function(response)
-        {
+    await fetch('data/states_data.json')
+        .then(function (response) {
             if (response.status == 200)
-                return Promise.resolve(response.blob())
+                return Promise.resolve(response.json())
             else
-                return Promise.reject(new Error(reponse.statusText))
+                return Promise.reject(new Error(response.statusText))
         })
-        .then(JSZip.loadAsync)
-        .then(async function(z)
-        {
-            zip = z
-            files = zip["files"]
-            f = await zip.file("us-states.json").async("string")
-            us_state_json = JSON.parse(f)
-        }, function error(e)
-    {
-        console.log("Error")
-    })
+        .then(function (f) {
+            us_state_json = f
+        })
 
     await fetch('data/county_data.json')
         .then(function (response) {
@@ -37,7 +23,6 @@ async function GetMaps() {
                 return Promise.reject(new Error(response.statusText))
         })
         .then(function (f) {
-            console.log(f)
             county_map = f
         })
 }
@@ -47,7 +32,7 @@ async function CreateMap()
     map_element = document.getElementById('map')
     shown_features = us_state_json.features.filter(f => f.properties.name != state_selected)
     const locations = shown_features.map(f => f.properties.name)
-    const densities = shown_features.map(f => f.properties.density)
+    const results = shown_features.map(f => f.properties.data[1]["R+"])
     us_state_json_copy = JSON.parse(JSON.stringify(us_state_json))
     us_state_json_copy.features = shown_features
 
@@ -55,25 +40,25 @@ async function CreateMap()
         type: "choropleth",
         geojson: us_state_json_copy,
         locations: locations,
-        z: densities,
+        z: results,
         locationmode: "geojson-id",
         featureidkey: "properties.name",
         colorscale: "RdBu",
+        zmin: -20,
+        zmax: 20,
         showscale: false,
         //colorbar: {title: "Population Density"},
     }]
 
-    console.log(state_selected)
-    if (state_selected == "Alabama")
+    if (state_selected > 0)
     {
         selected_state_counties = {
             "type": "FeatureCollection",
-            "features": county_map.features.filter(c => c.properties.STATE == '01')
+            "features": county_map.features.filter(c => c.properties.STATE == state_selected)
         }
         state_locations = selected_state_counties.features.map(f => f.properties.NAME)
         selected_state_counties.features.forEach(f => f.id = f.properties.NAME)
         state_idxs = selected_state_counties.features.map((_, index) => index + 1)
-        console.log(selected_state_counties)
 
         us_map_data.push({
             type: "choropleth",
@@ -86,8 +71,6 @@ async function CreateMap()
         })
     }
 
-    console.log(us_map_data)
-
     const us_map_layout = {
         title: "Title Test",
         geo: {
@@ -99,13 +82,10 @@ async function CreateMap()
     }
 
     Plotly.newPlot(map_element, us_map_data, us_map_layout)
-    
-    //console.log(us_map_data)
 
     Plotly.react(map_element, us_map_data, us_map_layout).then(() => {
         map_element.on("plotly_click", (event) => {
-            state_idx_selected = event.points[0].pointIndex
-            state_selected = us_map_data[0].locations[state_idx_selected]
+            state_selected = event.points[0].properties.id
             CreateMap()
         })
     })
