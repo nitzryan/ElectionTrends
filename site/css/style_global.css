@@ -1,12 +1,45 @@
+:root {
+    color-scheme: light dark;
+}
+
+@supports (color-scheme: light dark)
+{
+    :root {
+        --background_high: light-dark(#ffffff, #000000);
+        --background_med: light-dark(#eeeeee, #111111);
+        --background_low: light-dark(#dddddd, #222222);
+        --background_opp_low: light-dark(#222222, #dddddd);
+        --background_opp_med: light-dark(#111111, #eeeeee);
+        --background_opp_high: light-dark(#000000, #ffffff);
+        --red_text: light-dark(#aa0000, #ff2222);
+        --blue_text: light-dark(#0000aa, #2222ff);
+    }
+}
+
+@supports not (color-scheme: light dark)
+{
+    :root {
+        --background_high: #000000;
+        --background_med: #111111;
+        --background_low: #222222;
+        --background_opp_low: #dddddd;
+        --background_opp_med: #eeeeee;
+        --background_opp_high: #000000, #ffffff;
+        --red_text: #ff2222;
+        --blue_text: #2222ff;
+    }
+}
+
+:root {
+    --text_high: var(--background_high);
+    --text_med: var(--background_med);
+    --text_low: var(--background_low)
+}
+
 body {
-    background-color: #111111;
+    background-color: var(--background_high);
 }
 
 .hidden {
     display: none !important;
-}
-
-#hover_info
-{
-    position: absolute;
 }

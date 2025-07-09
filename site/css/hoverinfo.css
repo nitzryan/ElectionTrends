@@ -1,0 +1,32 @@
+#hover_info {
+    position: absolute;
+    border-color: var(--background_low);
+    border-width: 0.25em;
+    background-color: var(--background_opp_low);
+    color: var(--text_med);
+    line-height: 2;
+}
+
+#tooltip_red {
+    color: var(--red_text);
+}
+
+#tooltip_blue {
+    color: var(--blue_text);
+}
+
+#tooltip_state {
+    text-align: center;
+}
+
+.votecount {
+    text-align: right;
+}
+
+.voteperc {
+    text-align: right;
+}
+
+#tooltip_net_votes, #tooltip_net_margin {
+    text-align: center;
+}

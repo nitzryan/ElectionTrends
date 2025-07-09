@@ -1,6 +1,5 @@
 us_state_json = null
 state_selected = ""
-zip = null
 county_map = null
 
 us_map_data = null
@@ -33,7 +32,8 @@ async function CreateMap()
 {
     map_element = document.getElementById('map')
     hover_element = document.getElementById('hover_info')
-    hover_children = hover_element.getElementsByTagName('div')
+    hover_table = document.getElementById('tooltip_votes').getElementsByTagName('tbody')[0]
+
     shown_features = us_state_json.features.filter(f => f.properties.name != state_selected)
     const locations = shown_features.map(f => f.properties.name)
     const results = shown_features.map(f => f.properties.data[1]["R+"])
@@ -51,7 +51,7 @@ async function CreateMap()
         zmin: -20,
         zmax: 20,
         showscale: false,
-        //colorbar: {title: "Population Density"},
+        hoverinfo: "none",
     }]
 
     if (state_selected > 0)
@@ -93,15 +93,24 @@ async function CreateMap()
         point = event.points[0]
         point_index = point.pointIndex
         let hover_offset = window.innerWidth / 20.0
-        //console.log(event)
         if (point.fullData.name == "trace 0")
         {
             props = us_map_data[0].geojson.features[point_index].properties
             data = props.data[0]
-            hover_children[0].innerHTML = `${props.name}`
-            hover_children[1].innerHTML = `R: ${data.RVotes} (${data["R%"].toFixed(1)}%)`
-            hover_children[2].innerHTML = `D: ${data.DVotes} (${data["D%"].toFixed(1)}%)`
-            hover_children[3].innerHTML = `${data["R+"] > 0 ? ("R+" + data["R+"].toFixed(1)) : ("D+" + -data["R+"].toFixed(1))}`
+            hover_element.children[0].innerHTML = `${props.name}`
+            hover_table.children[0].children[1].innerHTML = data.RVotes.toLocaleString()
+            hover_table.children[0].children[2].innerHTML = data["R%"].toFixed(1) + '%'
+            hover_table.children[1].children[1].innerHTML = data.DVotes.toLocaleString()
+            hover_table.children[1].children[2].innerHTML = data["D%"].toFixed(1) + '%'
+            hover_element.children[2].innerHTML = `${data["R+"] > 0 ? ("R+" + data["R+"].toFixed(1)) : ("D+" + -data["R+"].toFixed(1))}`
+            if (data["R+"] > 0) {
+                hover_element.children[3].innerHTML = (data.RVotes - data.DVotes).toLocaleString()
+                hover_element.style.color = getComputedStyle(map_element).getPropertyValue('--red_text')
+            } else {
+                hover_element.children[3].innerHTML = (data.RVotes - data.DVotes).toLocaleString()
+                hover_element.style.color = getComputedStyle(map_element).getPropertyValue('--blue_text')
+            }
+            
 
             hover_element.style.left = `${event.event.x + hover_offset}px`
             hover_element.style.top = `${event.event.y - hover_offset}px`

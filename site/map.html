@@ -5,6 +5,7 @@
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <title>Electorate Trends</title>
         <link rel="stylesheet" type="text/css"  href="./css/style_global.css">
+        <link rel="stylesheet" type="text/css" href="./css/hoverinfo.css">
         <script src="https://cdn.plot.ly/plotly-3.0.1.min.js" charset="utf-8" defer></script>
         <script type="text/javascript" src="./js/map.js" defer></script>
     </head>
@@ -12,8 +13,19 @@
         <div id='map'></div>
         <div id="hover_info">
             <div id="tooltip_state"></div>
-            <div id="tooltip_r_votes" class="votecount"></div>
-            <div id="tooltip_d_votes" class="votecount"></div>
+            <table id="tooltip_votes">
+                <tr id="tooltip_red">
+                    <td>R: </td>
+                    <td id="tooltip_r_votes" class="votecount"></td>
+                    <td id="tooltip_r_perc" class="voteperc"></td>
+                </tr>
+                <tr id="tooltip_blue">
+                    <td>D: </td>
+                    <td id="tooltip_d_votes" class="votecount"></td>
+                    <td id="tooltip_d_perc" class="voteperc"></td>
+                </tr>
+            </table>
+            <div id="tooltip_net_margin" class="votecount"></div>
             <div id="tooltip_net_votes" class="votecount"></div>
         </div>
     </body>
