@@ -28,11 +28,38 @@ async function GetMaps() {
         })
 }
 
+function WriteHoverTemplate(name, rvotes, rperc, dvotes, dperc, rmargin, x, y)
+{
+    let hover_offset = window.innerWidth / 20.0
+    hover_element = document.getElementById('hover_info')
+    hover_table = document.getElementById('tooltip_votes').getElementsByTagName('tbody')[0]
+    
+    hover_element.children[0].innerHTML = name
+    hover_table.children[0].children[1].innerHTML = rvotes.toLocaleString()
+    hover_table.children[0].children[2].innerHTML = rperc.toFixed(1) + '%'
+    hover_table.children[1].children[1].innerHTML = dvotes.toLocaleString()
+    hover_table.children[1].children[2].innerHTML = dperc.toFixed(1) + '%'
+    
+    let netVotes = rvotes - dvotes
+    if (netVotes > 0) {
+        hover_element.children[2].innerHTML = "R+" + rmargin.toFixed(1)
+        hover_element.children[3].innerHTML = netVotes.toLocaleString()
+        hover_element.style.color = getComputedStyle(map_element).getPropertyValue('--red_text')
+    } else {
+        hover_element.children[2].innerHTML = "D+" + (-rmargin).toFixed(1)
+        hover_element.children[3].innerHTML = (-netVotes).toLocaleString()
+        hover_element.style.color = getComputedStyle(map_element).getPropertyValue('--blue_text')
+    }
+
+    hover_element.style.left = `${x + hover_offset}px`
+    hover_element.style.top = `${y - hover_offset}px`
+    hover_element.style.display = 'block'
+}
+
 async function CreateMap()
 {
     map_element = document.getElementById('map')
-    hover_element = document.getElementById('hover_info')
-    hover_table = document.getElementById('tooltip_votes').getElementsByTagName('tbody')[0]
+    
 
     shown_features = us_state_json.features.filter(f => f.properties.name != state_selected)
     const locations = shown_features.map(f => f.properties.name)
@@ -73,7 +100,8 @@ async function CreateMap()
             colorscale: "RdBu",
             zmin: -20,
             zmax: 20,
-            colorbar: {title: "County Number"},
+            colorbar: {title: "Vote Margin"},
+            hoverinfo: "none",
         })
     }
 
@@ -92,31 +120,19 @@ async function CreateMap()
     map_element.on('plotly_hover', function(event) {
         point = event.points[0]
         point_index = point.pointIndex
-        let hover_offset = window.innerWidth / 20.0
+        
         if (point.fullData.name == "trace 0")
         {
             props = us_map_data[0].geojson.features[point_index].properties
             data = props.data[0]
-            hover_element.children[0].innerHTML = `${props.name}`
-            hover_table.children[0].children[1].innerHTML = data.RVotes.toLocaleString()
-            hover_table.children[0].children[2].innerHTML = data["R%"].toFixed(1) + '%'
-            hover_table.children[1].children[1].innerHTML = data.DVotes.toLocaleString()
-            hover_table.children[1].children[2].innerHTML = data["D%"].toFixed(1) + '%'
-            hover_element.children[2].innerHTML = `${data["R+"] > 0 ? ("R+" + data["R+"].toFixed(1)) : ("D+" + -data["R+"].toFixed(1))}`
-            if (data["R+"] > 0) {
-                hover_element.children[3].innerHTML = (data.RVotes - data.DVotes).toLocaleString()
-                hover_element.style.color = getComputedStyle(map_element).getPropertyValue('--red_text')
-            } else {
-                hover_element.children[3].innerHTML = (data.RVotes - data.DVotes).toLocaleString()
-                hover_element.style.color = getComputedStyle(map_element).getPropertyValue('--blue_text')
-            }
-            
-
-            hover_element.style.left = `${event.event.x + hover_offset}px`
-            hover_element.style.top = `${event.event.y - hover_offset}px`
-            hover_element.style.display = 'block'
+            WriteHoverTemplate(props.name, data.RVotes, data["R%"], data.DVotes, data["D%"], data["R+"], event.event.x, event.event.y)
         } else {
-
+            props = us_map_data[1].geojson.features[point_index].properties
+            data = props.data[5]
+            rPerc = (data.rvotes / data.totalvotes)
+            dPerc = (data.dvotes / data.totalvotes)
+            rMarg = (data.rvotes - data.dvotes) / data.totalvotes * 100
+            WriteHoverTemplate(props.NAME, data.rvotes, rPerc, data.dvotes, dPerc, rMarg, event.event.x, event.event.y)
         }
         hover_element.classList.remove('hidden')
     }).on('plotly_unhover', function(data) {

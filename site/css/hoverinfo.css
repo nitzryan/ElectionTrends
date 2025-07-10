@@ -16,6 +16,7 @@
 }
 
 #tooltip_state {
+    color: var(--text_med);
     text-align: center;
 }
 
