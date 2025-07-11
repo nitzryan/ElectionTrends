@@ -4,6 +4,17 @@ county_map = null
 
 us_map_data = null
 
+let year_dict = {
+    2024: 0,
+    2020: 1,
+    2016: 2,
+    2012: 3,
+    2008: 4,
+    2004: 5,
+    2000: 6
+}
+let year_idx = year_dict[2024]
+
 async function GetMaps() {
     await fetch('data/states_data.json')
         .then(function (response) {
@@ -59,11 +70,9 @@ function WriteHoverTemplate(name, rvotes, rperc, dvotes, dperc, rmargin, x, y)
 async function CreateMap()
 {
     map_element = document.getElementById('map')
-    
-
     shown_features = us_state_json.features.filter(f => f.properties.name != state_selected)
     const locations = shown_features.map(f => f.properties.name)
-    const results = shown_features.map(f => f.properties.data[1]["R+"])
+    const results = shown_features.map(f => f.properties.data[year_idx]["R+"])
     us_state_json_copy = JSON.parse(JSON.stringify(us_state_json))
     us_state_json_copy.features = shown_features
 
@@ -89,7 +98,7 @@ async function CreateMap()
         }
         state_locations = selected_state_counties.features.map(f => f.properties.NAME)
         selected_state_counties.features.forEach(f => f.id = f.properties.NAME)
-        state_idxs = selected_state_counties.features.map(f => 100 * (f.properties.data[5].rvotes - f.properties.data[5].dvotes) / (f.properties.data[5].totalvotes))
+        state_idxs = selected_state_counties.features.map(f => 100 * (f.properties.data[year_idx].rvotes - f.properties.data[year_idx].dvotes) / (f.properties.data[year_idx].totalvotes))
 
         us_map_data.push({
             type: "choropleth",
@@ -124,11 +133,11 @@ async function CreateMap()
         if (point.fullData.name == "trace 0")
         {
             props = us_map_data[0].geojson.features[point_index].properties
-            data = props.data[0]
+            data = props.data[year_idx]
             WriteHoverTemplate(props.name, data.RVotes, data["R%"], data.DVotes, data["D%"], data["R+"], event.event.x, event.event.y)
         } else {
             props = us_map_data[1].geojson.features[point_index].properties
-            data = props.data[5]
+            data = props.data[year_idx]
             rPerc = (data.rvotes / data.totalvotes)
             dPerc = (data.dvotes / data.totalvotes)
             rMarg = (data.rvotes - data.dvotes) / data.totalvotes * 100
