@@ -70,7 +70,8 @@ function WriteHoverTemplate(name, rvotes, rperc, dvotes, dperc, rmargin, x, y)
 async function CreateMap()
 {
     map_element = document.getElementById('map')
-    shown_features = us_state_json.features.filter(f => f.properties.name != state_selected)
+    
+    shown_features = us_state_json.features.filter(f => f.id != state_selected)
     const locations = shown_features.map(f => f.properties.name)
     const results = shown_features.map(f => f.properties.data[year_idx]["R+"])
     us_state_json_copy = JSON.parse(JSON.stringify(us_state_json))
@@ -114,14 +115,30 @@ async function CreateMap()
         })
     }
 
-    const us_map_layout = {
+    let us_map_layout = {
         title: "Title Test",
         geo: {
             scope: "usa",
             projection: {type: "albers usa"},
             lakecolor: "white",
+            visible:false,
+            bgcolor: 'rgba(0,0,0,0)',
         },
-        height: 600
+        height: 800,
+        paper_bgcolor: 'rgba(0,0,0,0)',
+        plot_bgcolor: 'rgba(0,0,0,0)',
+    }
+    if (state_selected > 0)
+    {
+        state = us_state_json.features.filter(f => f.id == state_selected)[0].center
+        us_map_layout.geo.center = {"lat":state.lat, "lon":state.long}
+        
+        rect = map_element.getElementsByTagName('rect')[0]
+        plot_width = rect.getAttribute('width');
+        plot_height = rect.getAttribute('height');
+
+        state_scale = 0.02 * Math.min(plot_height / state.delta_lat, plot_width / state.delta_long)
+        us_map_layout.geo.projection.scale = state_scale
     }
 
     Plotly.newPlot(map_element, us_map_data, us_map_layout, {displayModeBar: false})
@@ -138,9 +155,9 @@ async function CreateMap()
         } else {
             props = us_map_data[1].geojson.features[point_index].properties
             data = props.data[year_idx]
-            rPerc = (data.rvotes / data.totalvotes)
-            dPerc = (data.dvotes / data.totalvotes)
-            rMarg = (data.rvotes - data.dvotes) / data.totalvotes * 100
+            rPerc = 100 * (data.rvotes / data.totalvotes)
+            dPerc = 100 * (data.dvotes / data.totalvotes)
+            rMarg = 100 * (data.rvotes - data.dvotes) / data.totalvotes
             WriteHoverTemplate(props.NAME, data.rvotes, rPerc, data.dvotes, dPerc, rMarg, event.event.x, event.event.y)
         }
         hover_element.classList.remove('hidden')
@@ -154,6 +171,7 @@ async function CreateMap()
             CreateMap()
         })
     })
+    
     
 }
 
