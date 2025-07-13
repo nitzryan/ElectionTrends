@@ -10,8 +10,16 @@
         <script type="text/javascript" src="./js/map.js" defer></script>
     </head>
     <body>
-        <select name="year_select" id="year_select">
-            
+        <div id="map_selector">
+            <select name="year_select" id="year_select"></select>
+            <select name="map_select" id="map_select">
+                <option value="normal">Normal</option>
+                <option value="voteshare">Vote Share</option>
+                <option value="votemargin">Vote Margin</option>
+            </select>
+        </div>
+        
+
         </select>
         <div id='map'></div>
         <div id="hover_info" class="hidden">
