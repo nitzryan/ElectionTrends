@@ -14,6 +14,7 @@ let year_dict = {
     2000: 6
 }
 let year_idx = year_dict[2024]
+const marker_sizeref_scale = 10
 
 function SetupYearDropdown()
 {
@@ -134,13 +135,14 @@ async function CreateMap()
 
     if (state_selected > 0)
     {
+        // Map of vote counts
         selected_state_counties = {
             "type": "FeatureCollection",
             "features": county_map.features.filter(c => c.properties.STATE == state_selected)
         }
         state_locations = selected_state_counties.features.map(f => f.properties.NAME)
         selected_state_counties.features.forEach(f => f.id = f.properties.NAME)
-        state_idxs = selected_state_counties.features.map(f => 100 * (f.properties.data[year_idx].rvotes - f.properties.data[year_idx].dvotes) / (f.properties.data[year_idx].totalvotes))
+        state_votes = selected_state_counties.features.map(f => 100 * (f.properties.data[year_idx].rvotes - f.properties.data[year_idx].dvotes) / (f.properties.data[year_idx].totalvotes))
 
         us_map_data[0].marker.line.width = 4
 
@@ -148,13 +150,56 @@ async function CreateMap()
             type: "choropleth",
             geojson: selected_state_counties,
             locations: state_locations,
-            z: state_idxs,
+            z: state_votes,
             locationmode: "geojson-id",
             colorscale: CreateColorscale(),
             zmin: -100,
             zmax: 100,
             colorbar: {title: "Vote Margin"},
             hoverinfo: "none",
+            visible: false,
+        })
+
+        // Background for bubble maps
+        us_map_data.push({
+            type: 'choropleth',
+            geojson: selected_state_counties,
+            locations: state_locations,
+            z: state_votes,
+            locationmode: 'geojson-id',
+            colorscale: [['0.0', 'rgb(247,247,247)'], ['1.0', 'rgb(247,247,247)']],
+            hoverinfo: 'none',
+        })
+
+        // Maps of vote distribution
+        county_lats = selected_state_counties.features.map(f => f.center.lat)
+        county_lons = selected_state_counties.features.map(f => f.center.long)
+        county_prop = selected_state_counties.features.map(f => 100 * f.properties.data[year_idx].vote_perc)
+        
+        max_bubble_size = 100
+        max_prop = Math.max(county_prop)
+        county_prop.forEach(f => f * max_bubble_size / max_prop)
+        
+        county_margin = selected_state_counties.features.map(f => 100 * f.properties.data[year_idx].r_marg)
+        max_margin = Math.max(...county_margin.map(f => Math.abs(f)))
+        county_margin = county_margin.map(f => f * max_bubble_size / max_margin)
+        county_colors = county_margin.map(f => f > 0 ? 'red' : 'blue')
+        county_margin = county_margin.map(f => Math.abs(f))
+
+        us_map_data.push({
+            type: 'scattergeo',
+            lat: county_lats,
+            lon: county_lons,
+            marker: {
+                size: county_margin,
+                color: county_colors,
+                line: {
+                    color: 'black',
+                    width: 1
+                },
+                sizemode: 'area',
+            },
+            hoverinfo: 'none',
         })
     }
 
@@ -178,9 +223,12 @@ async function CreateMap()
             scope: "usa",
             projection: {type: "albers usa"},
             lakecolor: "white",
+            //showcounties: true,
             visible:false,
             bgcolor: 'rgba(0,0,0,0)',
+            
         },
+        minzoom: 0.5,
         updatemenus: update_menus,
         height: 800,
         paper_bgcolor: 'rgba(0,0,0,0)',
@@ -197,6 +245,7 @@ async function CreateMap()
 
         state_scale = 0.02 * Math.min(plot_height / state.delta_lat, plot_width / state.delta_long)
         us_map_layout.geo.projection.scale = state_scale
+        us_map_data[3].marker.sizeref = marker_sizeref_scale / (state_scale ** 2)
     }
 
     Plotly.newPlot(map_element, us_map_data, us_map_layout, {displayModeBar: false})
@@ -238,9 +287,17 @@ async function CreateMap()
             state_selected = ""
             CreateMap()
         })
+
+        // Resize bubbles when zoomed
+        map_element.on('plotly_relayout', function(event) {
+            console.log(map_element.layout.geo.projection.scale)
+            if (!("geo.projection.scale" in event))
+                return
+
+            scale = event['geo.projection.scale']
+            Plotly.restyle(map_element, 'marker.sizeref', [marker_sizeref_scale / (scale**2)], [3])
+        })
     })
-    
-    
 }
 
 async function main()
