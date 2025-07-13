@@ -15,6 +15,23 @@ let year_dict = {
 }
 let year_idx = year_dict[2024]
 
+function SetupYearDropdown()
+{
+    year_select = document.getElementById('year_select')
+    for (var year of Object.keys(year_dict).sort().reverse())
+    {
+        option = document.createElement('option')
+        option.value = year
+        option.innerHTML = year
+        year_select.appendChild(option)
+    }
+
+    year_select.addEventListener('change', () => {
+        year_idx = year_dict[year_select.value]
+        CreateMap()
+    })
+}
+
 async function GetMaps() {
     await fetch('data/states_data.json')
         .then(function (response) {
@@ -67,6 +84,24 @@ function WriteHoverTemplate(name, rvotes, rperc, dvotes, dperc, rmargin, x, y)
     hover_element.style.display = 'block'
 }
 
+function CreateColorscale()
+{
+    colorscale = [
+        [0.0, 'rgb(0,0,81)'],
+        [0.2, 'rgb(0,74,150)'],
+        [0.35, 'rgb(33,102,172)'],
+        [0.46, 'rgb(103,169,207)'],
+        [0.4999, 'rgb(209,229,240)'],
+        [0.5, 'rgb(247,247,247)'],
+        [0.5001, 'rgb(253,219,199)'],
+        [0.54, 'rgb(239,138,98)'],
+        [0.65, 'rgb(178,24,43)'],
+        [.8, 'rgb(155,0,0)'],
+        [1.0, 'rgb(97,0,0)'],
+    ]
+    return colorscale
+}
+
 async function CreateMap()
 {
     map_element = document.getElementById('map')
@@ -84,11 +119,17 @@ async function CreateMap()
         z: results,
         locationmode: "geojson-id",
         featureidkey: "properties.name",
-        colorscale: "RdBu",
-        zmin: -20,
-        zmax: 20,
+        colorscale: CreateColorscale(),
+        zmin: -100,
+        zmax: 100,
         showscale: false,
         hoverinfo: "none",
+        marker: {
+            line: {
+                color: 'white',
+                width: 2,
+            }
+        }
     }]
 
     if (state_selected > 0)
@@ -101,19 +142,35 @@ async function CreateMap()
         selected_state_counties.features.forEach(f => f.id = f.properties.NAME)
         state_idxs = selected_state_counties.features.map(f => 100 * (f.properties.data[year_idx].rvotes - f.properties.data[year_idx].dvotes) / (f.properties.data[year_idx].totalvotes))
 
+        us_map_data[0].marker.line.width = 4
+
         us_map_data.push({
             type: "choropleth",
             geojson: selected_state_counties,
             locations: state_locations,
             z: state_idxs,
             locationmode: "geojson-id",
-            colorscale: "RdBu",
-            zmin: -20,
-            zmax: 20,
+            colorscale: CreateColorscale(),
+            zmin: -100,
+            zmax: 100,
             colorbar: {title: "Vote Margin"},
             hoverinfo: "none",
         })
     }
+
+    let update_menus = [
+        {
+            buttons: state_selected > 0 ?
+            [
+                {
+                    args: [],
+                    label: "Return",
+                    execute: false,
+                }
+            ] : [],
+            type: 'buttons',
+        }
+    ]
 
     let us_map_layout = {
         title: "Title Test",
@@ -124,6 +181,7 @@ async function CreateMap()
             visible:false,
             bgcolor: 'rgba(0,0,0,0)',
         },
+        updatemenus: update_menus,
         height: 800,
         paper_bgcolor: 'rgba(0,0,0,0)',
         plot_bgcolor: 'rgba(0,0,0,0)',
@@ -167,7 +225,17 @@ async function CreateMap()
 
     Plotly.react(map_element, us_map_data, us_map_layout).then(() => {
         map_element.on("plotly_click", (event) => {
+            point = event.points[0]
+            if (point.fullData.name != "trace 0")
+                return
+            
             state_selected = event.points[0].properties.id
+            hover_element.classList.add('hidden')
+            CreateMap()
+        })
+
+        map_element.on('plotly_buttonclicked', function(data) {
+            state_selected = ""
             CreateMap()
         })
     })
@@ -177,14 +245,9 @@ async function CreateMap()
 
 async function main()
 {
+    SetupYearDropdown()
     await GetMaps()
     await CreateMap()
-    // map = document.getElementById('map')
-    // map_data = [{
-    //     type: 'choroplethmap',
-    //     geojson: 'data/county_map.json'
-    // }]
-    // Plotly.newPlot(map, map_data)
 }
 
 main()
