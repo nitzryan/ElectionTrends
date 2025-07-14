@@ -14,7 +14,7 @@ let year_dict = {
     2000: 6
 }
 let year_idx = year_dict[2024]
-const marker_sizeref_scale = 0.25
+const marker_sizeref_scale = 0.15
 let map_visibility = [true, false, false, false]
 
 function SetupYearDropdown()
@@ -194,8 +194,8 @@ async function CreateMap(should_relocate)
         county_lons = selected_state_counties.features.map(f => f.center.long)
         county_prop = selected_state_counties.features.map(f => 100 * f.properties.data[year_idx].vote_perc)
         
-        max_prop = Math.max(...county_prop)
-        county_prop = county_prop.map(f =>  f / max_prop)         
+        state_max_values = us_state_json.features.filter(f => f.id == state_selected)[0].votemax
+        county_prop = county_prop.map(f =>  f / state_max_values.share)         
 
         us_map_data.push({
             type: 'scattergeo',
@@ -217,8 +217,7 @@ async function CreateMap(should_relocate)
         
         // Map of county votecount margins
         county_margin = selected_state_counties.features.map(f => 100 * f.properties.data[year_idx].r_marg)
-        max_margin = Math.max(...county_margin.map(f => Math.abs(f)))
-        county_margin = county_margin.map(f => f / max_margin)
+        county_margin = county_margin.map(f => f / state_max_values.margin)
         county_colors = county_margin.map(f => f > 0 ? 'red' : 'blue')
         county_margin = county_margin.map(f => Math.abs(f))
 
