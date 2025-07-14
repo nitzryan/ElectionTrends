@@ -115,10 +115,41 @@ function CreateColorscale()
         [0.5001, 'rgb(253,219,199)'],
         [0.54, 'rgb(239,138,98)'],
         [0.65, 'rgb(178,24,43)'],
-        [.8, 'rgb(155,0,0)'],
+        [0.8, 'rgb(155,0,0)'],
         [1.0, 'rgb(97,0,0)'],
     ]
     return colorscale
+}
+
+function ApplyColorscale(colorscale, value)
+{
+    for (let i = 1; i < colorscale.length; i++)
+    {
+        if (value <= colorscale[i][0])
+        {
+            const colorscale_delta = colorscale[i][0] - colorscale[i-1][0]
+            const prop_preceding = (colorscale[i][0] - value) / colorscale_delta
+            const prop_current = 1 - prop_preceding
+
+            const [prev_r, prev_g, prev_b] = colorscale[i-1][1].replace('rgb(', '')
+                .replace(')', '')
+                .split(',')
+                .map(str => Number(str));;
+
+            const [cur_r, cur_g, cur_b] = colorscale[i][1].replace('rgb(', '')
+                .replace(')', '')
+                .split(',')
+                .map(str => Number(str));;
+
+            const r = (prev_r * prop_preceding) + (cur_r * prop_current)
+            const g = (prev_g * prop_preceding) + (cur_g * prop_current)
+            const b = (prev_b * prop_preceding) + (cur_b * prop_current)
+
+            return `rgb(${r},${g},${b})`
+        }
+    }
+
+    return 'rgb(0,0,0)'
 }
 
 async function CreateMap(should_relocate)
@@ -196,6 +227,7 @@ async function CreateMap(should_relocate)
         
         state_max_values = us_state_json.features.filter(f => f.id == state_selected)[0].votemax
         county_prop = county_prop.map(f =>  f / state_max_values.share)         
+        county_colors = state_votes.map(f => ApplyColorscale(colorscale, 0.5 + (0.5 * f / 100)))
 
         us_map_data.push({
             type: 'scattergeo',
@@ -203,7 +235,7 @@ async function CreateMap(should_relocate)
             lon: county_lons,
             marker: {
                 size: county_prop,
-                //color: county_colors,
+                color: county_colors,
                 line: {
                     color: 'black',
                     width: 1
@@ -331,7 +363,7 @@ async function CreateMap(should_relocate)
 
         map_element.on('plotly_buttonclicked', function(data) {
             state_selected = ""
-            CreateMaptrue
+            CreateMap(true)
         })
 
         // Resize bubbles when zoomed
