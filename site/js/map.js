@@ -289,8 +289,8 @@ async function CreateMap(should_relocate)
                 size: county_prop,
                 color: county_colors,
                 line: {
-                    color: 'black',
-                    width: 1
+                    color: Array(county_prop.size).fill('black'),
+                    width: Array(county_prop.size).fill(1)
                 },
                 sizemode: 'area',
             },
@@ -435,10 +435,24 @@ function HandleCountyClick(event)
     point_index = event.points[0].pointIndex
     id = us_map_data[1].geojson.features[point_index].id
     
-    selected_groups = [[id]]
-    graph_type_selector.dispatchEvent(new Event('change'))
+    if (selected_groups[0].includes(id))
+        selected_groups[0] = selected_groups[0].filter(f => f != id)
+    else
+        selected_groups[0].push(id)
 
-    //UpdateLineplot([[id]], 'VoteMargin')
+    Plotly.restyle(map_element, 'marker.line.color', [selected_state_counties.features.map(f => (selected_groups[0].includes(f.id)) ? 'yellow' : 'black')], [1])
+    Plotly.restyle(map_element, 'marker.line.width', [selected_state_counties.features.map(f => (selected_groups[0].includes(f.id)) ? 4 : 1)], [1])
+    
+
+    
+        if (!selected_groups.reduce((any_found, current_list) => any_found || current_list.length > 0, false))
+    {
+        group_viewer.classList.add('hidden')
+        return
+    }
+
+    group_viewer.classList.remove('hidden')
+    graph_type_selector.dispatchEvent(new Event('change'))
 }
 
 function SetupGraphDropdown()
@@ -451,6 +465,8 @@ function SetupGraphDropdown()
 
 async function main()
 {
+    group_viewer = document.getElementById('group_viewer')
+    
     SetupYearDropdown()
     await GetMaps()
     await CreateMap(true)
