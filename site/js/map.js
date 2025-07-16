@@ -372,7 +372,8 @@ async function CreateMap(should_relocate)
                 return
 
             scale = event['geo.projection.scale']
-            Plotly.restyle(map_element, 'marker.sizeref', [marker_sizeref_scale / (scale**2)], [3,4])
+            if (state_selected > 0)
+                Plotly.restyle(map_element, 'marker.sizeref', [marker_sizeref_scale / (scale**2)], [3,4])
         })
     })
 }
