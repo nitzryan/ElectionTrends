@@ -3,6 +3,7 @@ state_selected = ""
 county_map = null
 
 us_map_data = null
+selected_groups = [[]]
 
 let year_dict = {
     2024: 0,
@@ -152,6 +153,57 @@ function ApplyColorscale(colorscale, value)
     return 'rgb(0,0,0)'
 }
 
+function UpdateLineplot(countyListList, plotType)
+{
+    var traces = []
+    for(const countyList of countyListList)
+    {
+        counties = county_map.features.filter(f => countyList.includes(f.id))
+        xs = Object.keys(year_dict).sort().reverse()
+        ys = Array.from(xs, () => ({
+            totalvotes: 0,
+            rvotes: 0,
+            dvotes: 0,
+            vote_perc: 0,
+            r_marg: 0
+        }))
+
+        for(const county of counties)
+        {
+            const data = county.properties.data
+            for(let i = 0; i < data.length; i++)
+            {
+                d = data[i]
+                ys[i].totalvotes += d.totalvotes
+                ys[i].rvotes += d.rvotes
+                ys[i].dvotes += d.dvotes
+                ys[i].vote_perc += d.vote_perc
+                ys[i].r_marg += d.r_marg
+            }
+        }
+
+        if (plotType == 'state_voteshare')
+            y = ys.map(f => f.vote_perc)
+        else if (plotType == 'state_marginshare')
+            y = ys.map(f => f.r_marg)
+        else if (plotType == 'net_votes')
+            y = ys.map(f => f.rvotes - f.dvotes)
+        else if (plotType == 'net_margin')
+            y = ys.map(f => (f.rvotes - f.dvotes) / f.totalvotes)
+        else if (plotType == 'total_votes')
+            y = ys.map(f => f.totalvotes)
+
+        traces.push({
+            x: xs,
+            y: y,
+            type: 'scatter'
+        })
+    }
+
+    group_graph = document.getElementById('group_graph')
+    Plotly.newPlot(group_graph, traces)
+}
+
 async function CreateMap(should_relocate)
 {
     map_element = document.getElementById('map')
@@ -189,8 +241,8 @@ async function CreateMap(should_relocate)
             "type": "FeatureCollection",
             "features": county_map.features.filter(c => c.properties.STATE == state_selected)
         }
-        state_locations = selected_state_counties.features.map(f => f.properties.NAME)
-        selected_state_counties.features.forEach(f => f.id = f.properties.NAME)
+
+        state_locations = selected_state_counties.features.map(f => f.id)
         state_votes = selected_state_counties.features.map(f => 100 * (f.properties.data[year_idx].rvotes - f.properties.data[year_idx].dvotes) / (f.properties.data[year_idx].totalvotes))
 
         us_map_data[0].marker.line.width = 4
@@ -354,7 +406,7 @@ async function CreateMap(should_relocate)
         map_element.on("plotly_click", (event) => {
             point = event.points[0]
             if (point.fullData.name != "trace 0")
-                return
+                return HandleCountyClick(event)
             
             state_selected = event.points[0].properties.id
             hover_element.classList.add('hidden')
@@ -378,12 +430,32 @@ async function CreateMap(should_relocate)
     })
 }
 
+function HandleCountyClick(event)
+{
+    point_index = event.points[0].pointIndex
+    id = us_map_data[1].geojson.features[point_index].id
+    
+    selected_groups = [[id]]
+    graph_type_selector.dispatchEvent(new Event('change'))
+
+    //UpdateLineplot([[id]], 'VoteMargin')
+}
+
+function SetupGraphDropdown()
+{
+    graph_type_selector = document.getElementById('graph_type_select')
+    graph_type_selector.addEventListener('change', () => {
+        UpdateLineplot(selected_groups, graph_type_selector.value)
+    })
+}
+
 async function main()
 {
     SetupYearDropdown()
     await GetMaps()
     await CreateMap(true)
     SetupMapModeDropdown()
+    SetupGraphDropdown()
 }
 
 main()
