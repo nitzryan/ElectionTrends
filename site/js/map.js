@@ -3,7 +3,6 @@ state_selected = ""
 county_map = null
 
 us_map_data = null
-selected_groups = [[]]
 
 let year_dict = {
     2024: 0,
@@ -153,12 +152,12 @@ function ApplyColorscale(colorscale, value)
     return 'rgb(0,0,0)'
 }
 
-function UpdateLineplot(countyListList, plotType)
+function UpdateLineplot(groupList, plotType)
 {
     var traces = []
-    for(const countyList of countyListList)
+    for(const group of groupList)
     {
-        counties = county_map.features.filter(f => countyList.includes(f.id))
+        counties = county_map.features.filter(f => group.counties.includes(f.id))
         xs = Object.keys(year_dict).sort().reverse()
         ys = Array.from(xs, () => ({
             totalvotes: 0,
@@ -204,7 +203,7 @@ function UpdateLineplot(countyListList, plotType)
     Plotly.newPlot(group_graph, traces)
 }
 
-async function CreateMap(should_relocate)
+function CreateMap(should_relocate)
 {
     map_element = document.getElementById('map')
     
@@ -411,11 +410,13 @@ async function CreateMap(should_relocate)
             state_selected = event.points[0].properties.id
             hover_element.classList.add('hidden')
             CreateMap(true)
+            LoadStateGroups()
         })
 
         map_element.on('plotly_buttonclicked', function(data) {
             state_selected = ""
             CreateMap(true)
+            LoadStateGroups()
         })
 
         // Resize bubbles when zoomed
@@ -430,22 +431,45 @@ async function CreateMap(should_relocate)
     })
 }
 
+function LoadStateGroups()
+{
+    // Load groups from cookies (TODO)
+    selected_groups = JSON.parse(localStorage.getItem(`groups${state_selected}`))
+    if (selected_groups === null)
+        selected_groups = [{name: 'default', counties:[]}]
+    current_group_idx = 0
+
+    UpdateGraph()
+}
+
+function StoreStateGroups()
+{
+    localStorage.setItem(`groups${state_selected}`, JSON.stringify(selected_groups))
+}
+
 function HandleCountyClick(event)
 {
     point_index = event.points[0].pointIndex
     id = us_map_data[1].geojson.features[point_index].id
     
-    if (selected_groups[0].includes(id))
-        selected_groups[0] = selected_groups[0].filter(f => f != id)
+    if (selected_groups[current_group_idx].counties.includes(id))
+        selected_groups[current_group_idx].counties = selected_groups[current_group_idx].counties.filter(f => f != id)
     else
-        selected_groups[0].push(id)
+        selected_groups[current_group_idx].counties.push(id)
 
-    Plotly.restyle(map_element, 'marker.line.color', [selected_state_counties.features.map(f => (selected_groups[0].includes(f.id)) ? 'yellow' : 'black')], [1])
-    Plotly.restyle(map_element, 'marker.line.width', [selected_state_counties.features.map(f => (selected_groups[0].includes(f.id)) ? 4 : 1)], [1])
-    
+    StoreStateGroups()
+    UpdateGraph()
+}
 
+function UpdateGraph()
+{
+    if (typeof selected_state_counties !== 'undefined' && state_selected > 0)
+    {
+        Plotly.restyle(map_element, 'marker.line.color', [selected_state_counties.features.map(f => (selected_groups[current_group_idx].counties.includes(f.id)) ? 'yellow' : 'black')], [1])
+        Plotly.restyle(map_element, 'marker.line.width', [selected_state_counties.features.map(f => (selected_groups[current_group_idx].counties.includes(f.id)) ? 4 : 1)], [1])
+    }
     
-        if (!selected_groups.reduce((any_found, current_list) => any_found || current_list.length > 0, false))
+    if (!selected_groups.reduce((any_found, current_list) => any_found || current_list.counties.length > 0, false))
     {
         group_viewer.classList.add('hidden')
         return
@@ -465,6 +489,7 @@ function SetupGraphDropdown()
 
 async function main()
 {
+    localStorage.clear()
     group_viewer = document.getElementById('group_viewer')
     
     SetupYearDropdown()
