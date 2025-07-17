@@ -436,7 +436,7 @@ function LoadStateGroups()
     // Load groups from cookies (TODO)
     selected_groups = JSON.parse(localStorage.getItem(`groups${state_selected}`))
     if (selected_groups === null)
-        selected_groups = [{name: 'default', counties:[]}]
+        selected_groups = [{name: 'default', counties:[], color: 'rgb(255, 255, 0)'}]
     current_group_idx = 0
 
     UpdateGraph()
@@ -461,12 +461,34 @@ function HandleCountyClick(event)
     UpdateGraph()
 }
 
+function GetCountyColor(county_id)
+{
+    for (const group of selected_groups)
+    {
+        if (group.counties.includes(county_id))
+            return group.color
+    }
+
+    return 'black'
+}
+
+function GetCountyWidth(county_id)
+{
+    for (const group of selected_groups)
+    {
+        if (group.counties.includes(county_id))
+            return 4
+    }
+
+    return 1
+}
+
 function UpdateGraph()
 {
     if (typeof selected_state_counties !== 'undefined' && state_selected > 0)
     {
-        Plotly.restyle(map_element, 'marker.line.color', [selected_state_counties.features.map(f => (selected_groups[current_group_idx].counties.includes(f.id)) ? 'yellow' : 'black')], [1])
-        Plotly.restyle(map_element, 'marker.line.width', [selected_state_counties.features.map(f => (selected_groups[current_group_idx].counties.includes(f.id)) ? 4 : 1)], [1])
+        Plotly.restyle(map_element, 'marker.line.color', [selected_state_counties.features.map(f => GetCountyColor(f.id))], [1])
+        Plotly.restyle(map_element, 'marker.line.width', [selected_state_counties.features.map(f => GetCountyWidth(f.id))], [1])
     }
     
     if (!selected_groups.reduce((any_found, current_list) => any_found || current_list.counties.length > 0, false))
@@ -489,12 +511,11 @@ function SetupGraphDropdown()
 
 async function main()
 {
-    localStorage.clear()
     group_viewer = document.getElementById('group_viewer')
     
     SetupYearDropdown()
     await GetMaps()
-    await CreateMap(true)
+    CreateMap(true)
     SetupMapModeDropdown()
     SetupGraphDropdown()
 }
