@@ -17,6 +17,8 @@ let year_idx = year_dict[2024]
 const marker_sizeref_scale = 0.15
 let map_visibility = [true, false, false, false]
 
+const group_default_palettes = ['#FFFFB3','#8DD3C7','#BEBADA','#FDB462','#B3DE69','#FCCDE5']
+
 function SetupYearDropdown()
 {
     year_select = document.getElementById('year_select')
@@ -339,6 +341,7 @@ function CreateMap(should_relocate)
 
     let us_map_layout = {
         title: "Title Test",
+        dragmode: 'pan',
         geo: {
             scope: "usa",
             projection: {type: "albers usa"},
@@ -431,14 +434,34 @@ function CreateMap(should_relocate)
     })
 }
 
+function UpdateGroupDropdown()
+{
+    group_options = []
+    for (let i = 0; i < selected_groups.length; i++)
+    {
+        group = selected_groups[i]
+        option = document.createElement('option')
+        option.value = i
+        option.innerHTML = group.name
+        group_options.push(option)
+    }
+    graph_group_select.replaceChildren(...group_options)
+    graph_group_select.value = current_group_idx
+    graph_group_select.dispatchEvent(new Event('change'))
+
+    // Don't allow deletion if only 1 group exists
+    button_delete_group.disabled = selected_groups.length <= 1
+}
+
 function LoadStateGroups()
 {
     // Load groups from cookies (TODO)
     selected_groups = JSON.parse(localStorage.getItem(`groups${state_selected}`))
     if (selected_groups === null)
-        selected_groups = [{name: 'default', counties:[], color: 'rgb(255, 255, 0)'}]
+        selected_groups = [{name: 'Group1', counties:[], color: group_default_palettes[0]}]
     current_group_idx = 0
 
+    UpdateGroupDropdown()
     UpdateGraph()
 }
 
@@ -501,23 +524,76 @@ function UpdateGraph()
     graph_type_selector.dispatchEvent(new Event('change'))
 }
 
-function SetupGraphDropdown()
+function SetupGraphDropdowns()
 {
     graph_type_selector = document.getElementById('graph_type_select')
     graph_type_selector.addEventListener('change', () => {
         UpdateLineplot(selected_groups, graph_type_selector.value)
+    })
+
+    graph_group_select.addEventListener('change', () => {
+        current_group_idx = graph_group_select.value
+        input_group_name.value = selected_groups[current_group_idx].name
+        input_group_color.value = selected_groups[current_group_idx].color
+    })
+
+    input_group_color.addEventListener('change', () => {
+        selected_groups[current_group_idx].color = input_group_color.value
+        Plotly.restyle(map_element, 'marker.line.color', [selected_state_counties.features.map(f => GetCountyColor(f.id))], [1])
+        StoreStateGroups()
+    })
+
+    var typing_timer;
+    const typing_ms = 1000
+    input_group_name.addEventListener('keyup', () => {
+        clearTimeout(typing_timer)
+        typing_timer = setTimeout(() => {
+            selected_groups[current_group_idx].name = input_group_name.value
+            graph_group_select.children[current_group_idx].innerHTML = input_group_name.value
+            StoreStateGroups()
+        }, typing_ms)
+    })
+    input_group_name.addEventListener('keydown', () => {
+        clearTimeout(typing_timer)
+    })
+}
+
+function SetupGroupControl()
+{
+    button_add_group.addEventListener('click', () => {
+        idx = selected_groups.length
+        selected_groups.push({name: `Group${idx + 1}`, counties:[], color: group_default_palettes[idx % group_default_palettes.length]})
+        current_group_idx = idx
+        UpdateGroupDropdown()
+    })
+    
+    button_delete_group.addEventListener('click', () => {
+        if (selected_groups.length <= 1) // Sanity Check
+            return;
+
+        selected_groups = selected_groups.filter((_, idx) => idx != current_group_idx)
+        current_group_idx = 0
+        UpdateGroupDropdown()
+        UpdateGraph()
+        StoreStateGroups()
     })
 }
 
 async function main()
 {
     group_viewer = document.getElementById('group_viewer')
-    
+    graph_group_select = document.getElementById('graph_group_select')
+    input_group_name = document.getElementById('input_group_name')
+    button_add_group = document.getElementById('button_add_group')
+    button_delete_group = document.getElementById('button_delete_group')
+    input_group_color = document.getElementById('input_group_color')
+
     SetupYearDropdown()
     await GetMaps()
     CreateMap(true)
     SetupMapModeDropdown()
-    SetupGraphDropdown()
+    SetupGraphDropdowns()
+    SetupGroupControl()
 }
 
 main()
