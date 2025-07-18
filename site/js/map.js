@@ -183,26 +183,75 @@ function UpdateLineplot(groupList, plotType)
             }
         }
 
+        tickvals = []
+        for (let i = 0; i < 21; i++)
+                tickvals.push(i * 0.1 - 1)
         if (plotType == 'state_voteshare')
+        {
             y = ys.map(f => f.vote_perc)
+            map_fn = f => (f * 100).toFixed(1).toLocaleString() + '%'
+            use_tickvals = true
+        }
         else if (plotType == 'state_marginshare')
+        {
             y = ys.map(f => f.r_marg)
+            map_fn = f => f > 0 ? `R+${(f * 100).toFixed(1)}` : `D+${(f * -100).toFixed(1)}`
+            use_tickvals = true
+        }
         else if (plotType == 'net_votes')
+        {
             y = ys.map(f => f.rvotes - f.dvotes)
+            map_fn = f => f.toLocaleString()
+            use_tickvals = false
+        }
         else if (plotType == 'net_margin')
+        {
             y = ys.map(f => (f.rvotes - f.dvotes) / f.totalvotes)
+            map_fn = f => f > 0 ? `R+${(f * 100).toFixed(1)}` : `D+${(f * -100).toFixed(1)}`
+            use_tickvals = true
+        }
         else if (plotType == 'total_votes')
+        {
             y = ys.map(f => f.totalvotes)
+            map_fn = f => f.toLocaleString()
+            use_tickvals = false
+        }
+        else 
+            return
+
+        customdata = y.map(map_fn)
+        ticktext = tickvals.map(map_fn)
 
         traces.push({
             x: xs,
             y: y,
-            type: 'scatter'
+            type: 'scatter',
+            name: group.name,
+            customdata: customdata,
+            hovertemplate: '%{customdata}',
+            marker: {
+                color: group.color,
+            },
         })
     }
 
+    var layout = {
+        xaxis: {
+            tickvals: Object.keys(year_dict)
+        },
+        plot_bgcolor: '#111111',
+        paper_bgcolor: '#111111',
+    }
+    if (use_tickvals)
+    {
+        layout.yaxis = {
+                tickvals: tickvals,
+                ticktext: ticktext,
+        }
+    }
+
     group_graph = document.getElementById('group_graph')
-    Plotly.newPlot(group_graph, traces)
+    Plotly.newPlot(group_graph, traces, layout)
 }
 
 function CreateMap(should_relocate)
