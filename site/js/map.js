@@ -338,10 +338,6 @@ function CreateMap(should_relocate)
             marker: {
                 size: county_prop,
                 color: county_colors,
-                line: {
-                    color: Array(county_prop.size).fill('black'),
-                    width: Array(county_prop.size).fill(1)
-                },
                 sizemode: 'area',
             },
             hoverinfo: 'none',
