@@ -1,7 +1,7 @@
 us_state_json = null
 state_selected = ""
 county_map = null
-
+current_group = null
 us_map_data = null
 
 let year_dict = {
@@ -15,9 +15,17 @@ let year_dict = {
 }
 let year_idx = year_dict[2024]
 const marker_sizeref_scale = 0.15
-let map_visibility = [true, false, false, false]
+let map_visibility = [true, false, true, false, false]
 
-const group_default_palettes = ['#FFFFB3','#8DD3C7','#BEBADA','#FDB462','#B3DE69','#FCCDE5']
+const group_default_palettes = ['#001d5c','#4c206b','#811e6f','#af206a','#d6335c','#f15448','#ff7c2e','#ffa600']
+
+// Map indices
+const US_MAP_IDX = 0
+const STATE_MAP_MARGINS_IDX = 1
+const STATE_MAP_OUTLINES_IDX = 2
+const STATE_MAP_HIGHLIGHTS_IDX = 3
+const STATE_MAP_SHARE_IDX = 4
+const STATE_MAP_NET_IDX = 5
 
 function SetupYearDropdown()
 {
@@ -42,14 +50,14 @@ function SetupMapModeDropdown()
     map_select.addEventListener('change', () => {
         map_mode = map_select.value
         if (map_mode == 'normal')
-            map_visibility = [true, false, false, false]
+            map_visibility = [true, false, true, false, false]
         else if (map_mode == 'voteshare')
-            map_visibility = [false, true, true, false]
+            map_visibility = [false, true, true, true, false]
         else if (map_mode == 'votemargin')
-            map_visibility = [false, true, false, true]
+            map_visibility = [false, true, true, false, true]
 
         if (state_selected > 0)
-            Plotly.restyle(map_element, {visible: map_visibility}, [1,2,3,4])
+            Plotly.restyle(map_element, {visible: map_visibility}, [1,2,3,4,5])
     })
 }
 
@@ -286,12 +294,13 @@ function CreateMap(should_relocate)
 
     if (state_selected > 0)
     {
-        // Map of vote counts
+        
         selected_state_counties = {
             "type": "FeatureCollection",
             "features": county_map.features.filter(c => c.properties.STATE == state_selected)
         }
 
+        // Map of vote margins, traditional map
         state_locations = selected_state_counties.features.map(f => f.id)
         state_votes = selected_state_counties.features.map(f => 100 * (f.properties.data[year_idx].rvotes - f.properties.data[year_idx].dvotes) / (f.properties.data[year_idx].totalvotes))
 
@@ -317,9 +326,28 @@ function CreateMap(should_relocate)
             locations: state_locations,
             z: state_votes,
             locationmode: 'geojson-id',
-            colorscale: [['0.0', 'rgb(247,247,247)'], ['1.0', 'rgb(247,247,247)']],
+            colorscale: [['0.0', 'rgba(0,0,0,0)'], ['1.0', 'rgba(0,0,0,0)']],
             hoverinfo: 'none',
             showscale: false,
+        })
+
+        // Map of currently highlighted counties so their borders are drawn on top
+        highlighted_locations = selected_state_counties.features.map(f => f.id)
+        highlighted_locations = highlighted_locations.filter(f => current_group.counties.includes(f))
+        us_map_data.push({
+            type: 'choropleth',
+            geojson: selected_state_counties,
+            locations: highlighted_locations,
+            z: highlighted_locations.map(_ => 0),
+            colorscale: [['0.0', 'rgba(0,0,0,0)'], ['1.0', 'rgba(0,0,0,0)']],
+            hoverinfo: 'skip',
+            showscale: false,
+            marker: {
+                line: {
+                    color: current_group.color,
+                    width: 4,
+                },
+            },
         })
 
         // Maps of vote distribution
@@ -391,7 +419,6 @@ function CreateMap(should_relocate)
             scope: "usa",
             projection: {type: "albers usa"},
             lakecolor: "white",
-            //showcounties: true,
             visible:false,
             bgcolor: 'rgba(0,0,0,0)',
             
@@ -418,10 +445,10 @@ function CreateMap(should_relocate)
         else
             us_map_layout.geo = map_element.layout.geo
 
-        us_map_data[3].marker.sizeref = marker_sizeref_scale / (us_map_layout.geo.projection.scale ** 2)
-        us_map_data[4].marker.sizeref = us_map_data[3].marker.sizeref
+        us_map_data[4].marker.sizeref = marker_sizeref_scale / (us_map_layout.geo.projection.scale ** 2)
+        us_map_data[5].marker.sizeref = us_map_data[5].marker.sizeref
 
-        for (let i = 0; i < 4; i++)
+        for (let i = 0; i < 5; i++)
             us_map_data[i + 1].visible = map_visibility[i]
     }
 
@@ -457,14 +484,17 @@ function CreateMap(should_relocate)
             
             state_selected = event.points[0].properties.id
             hover_element.classList.add('hidden')
-            CreateMap(true)
             LoadStateGroups()
+            CreateMap(true)
+            SetupGroups()
         })
 
         map_element.on('plotly_buttonclicked', function(data) {
             state_selected = ""
-            CreateMap(true)
+            current_group = null
             LoadStateGroups()
+            CreateMap(true)
+            SetupGroups()
         })
 
         // Resize bubbles when zoomed
@@ -474,9 +504,15 @@ function CreateMap(should_relocate)
 
             scale = event['geo.projection.scale']
             if (state_selected > 0)
-                Plotly.restyle(map_element, 'marker.sizeref', [marker_sizeref_scale / (scale**2)], [3,4])
+                Plotly.restyle(map_element, 'marker.sizeref', [marker_sizeref_scale / (scale**2)], [4,5])
         })
     })
+}
+
+function SetupGroups()
+{
+    UpdateGroupDropdown()
+    UpdateGraph()
 }
 
 function UpdateGroupDropdown()
@@ -505,9 +541,7 @@ function LoadStateGroups()
     if (selected_groups === null)
         selected_groups = [{name: 'Group1', counties:[], color: group_default_palettes[0]}]
     current_group_idx = 0
-
-    UpdateGroupDropdown()
-    UpdateGraph()
+    current_group = selected_groups[current_group_idx]
 }
 
 function StoreStateGroups()
@@ -517,48 +551,51 @@ function StoreStateGroups()
 
 function HandleCountyClick(event)
 {
-    point_index = event.points[0].pointIndex
-    id = us_map_data[1].geojson.features[point_index].id
+    id = event.points[0].location
     
-    if (selected_groups[current_group_idx].counties.includes(id))
-        selected_groups[current_group_idx].counties = selected_groups[current_group_idx].counties.filter(f => f != id)
+    if (current_group.counties.includes(id))
+        current_group.counties = current_group.counties.filter(f => f != id)
     else
-        selected_groups[current_group_idx].counties.push(id)
+        current_group.counties.push(id)
 
     StoreStateGroups()
     UpdateGraph()
+    UpdateHighlights()
+}
+
+function UpdateHighlights()
+{
+    if (current_group == null)
+        return
+
+    highlighted_locations = selected_state_counties.features.map(f => f.id)
+    highlighted_locations = highlighted_locations.filter(f => current_group.counties.includes(f))
+
+    Plotly.restyle(map_element, {
+        locations: [highlighted_locations],
+        z: [highlighted_locations.map(_ => 0)],
+        'marker.line.color': current_group.color,
+    }, [STATE_MAP_HIGHLIGHTS_IDX])
 }
 
 function GetCountyColor(county_id)
 {
-    for (const group of selected_groups)
-    {
-        if (group.counties.includes(county_id))
-            return group.color
-    }
+    if (current_group.counties.includes(county_id))
+        return current_group.color
 
-    return 'black'
+    return 'white'
 }
 
 function GetCountyWidth(county_id)
 {
-    for (const group of selected_groups)
-    {
-        if (group.counties.includes(county_id))
-            return 4
-    }
+    if (current_group.counties.includes(county_id))
+        return 4
 
     return 1
 }
 
 function UpdateGraph()
 {
-    if (typeof selected_state_counties !== 'undefined' && state_selected > 0)
-    {
-        Plotly.restyle(map_element, 'marker.line.color', [selected_state_counties.features.map(f => GetCountyColor(f.id))], [1])
-        Plotly.restyle(map_element, 'marker.line.width', [selected_state_counties.features.map(f => GetCountyWidth(f.id))], [1])
-    }
-    
     if (!selected_groups.reduce((any_found, current_list) => any_found || current_list.counties.length > 0, false))
     {
         group_viewer.classList.add('hidden')
@@ -578,13 +615,15 @@ function SetupGraphDropdowns()
 
     graph_group_select.addEventListener('change', () => {
         current_group_idx = graph_group_select.value
-        input_group_name.value = selected_groups[current_group_idx].name
-        input_group_color.value = selected_groups[current_group_idx].color
+        current_group = selected_groups[current_group_idx]
+        input_group_name.value = current_group.name
+        input_group_color.value = current_group.color
+        UpdateHighlights()
     })
 
     input_group_color.addEventListener('change', () => {
-        selected_groups[current_group_idx].color = input_group_color.value
-        Plotly.restyle(map_element, 'marker.line.color', [selected_state_counties.features.map(f => GetCountyColor(f.id))], [1])
+        current_group.color = input_group_color.value
+        UpdateHighlights()
         StoreStateGroups()
     })
 
@@ -593,8 +632,10 @@ function SetupGraphDropdowns()
     input_group_name.addEventListener('keyup', () => {
         clearTimeout(typing_timer)
         typing_timer = setTimeout(() => {
-            selected_groups[current_group_idx].name = input_group_name.value
+            current_group.name = input_group_name.value
             graph_group_select.children[current_group_idx].innerHTML = input_group_name.value
+            if (current_group.counties.length > 0)
+                Plotly.restyle(group_graph, 'name', [input_group_name.value], [graph_group_select.value])
             StoreStateGroups()
         }, typing_ms)
     })
