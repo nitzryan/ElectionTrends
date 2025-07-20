@@ -302,7 +302,7 @@ function CreateMap(should_relocate)
 
         // Map of vote margins, traditional map
         state_locations = selected_state_counties.features.map(f => f.id)
-        state_votes = selected_state_counties.features.map(f => 100 * (f.properties.data[year_idx].rvotes - f.properties.data[year_idx].dvotes) / (f.properties.data[year_idx].totalvotes))
+        state_votes = selected_state_counties.features.map(f => {try {return 100 * (f.properties.data[year_idx].rvotes - f.properties.data[year_idx].dvotes) / (f.properties.data[year_idx].totalvotes) } catch(error){return 0}})
 
         us_map_data[0].marker.line.width = 4
 
@@ -353,7 +353,7 @@ function CreateMap(should_relocate)
         // Maps of vote distribution
         county_lats = selected_state_counties.features.map(f => f.center.lat)
         county_lons = selected_state_counties.features.map(f => f.center.long)
-        county_prop = selected_state_counties.features.map(f => 100 * f.properties.data[year_idx].vote_perc)
+        county_prop = selected_state_counties.features.map(f => {try{return 100 * f.properties.data[year_idx].vote_perc}catch(_){return 0}})
         
         state_max_values = us_state_json.features.filter(f => f.id == state_selected)[0].votemax
         county_prop = county_prop.map(f =>  f / state_max_values.share)         
@@ -374,7 +374,7 @@ function CreateMap(should_relocate)
 
         
         // Map of county votecount margins
-        county_margin = selected_state_counties.features.map(f => 100 * f.properties.data[year_idx].r_marg)
+        county_margin = selected_state_counties.features.map(f => {try{return 100 * f.properties.data[year_idx].r_marg}catch(_){return 0}})
         county_margin = county_margin.map(f => f / state_max_values.margin)
         county_colors = county_margin.map(f => f > 0 ? 'red' : 'blue')
         county_margin = county_margin.map(f => Math.abs(f))
@@ -466,10 +466,16 @@ function CreateMap(should_relocate)
         } else {
             props = us_map_data[1].geojson.features[point_index].properties
             data = props.data[year_idx]
-            rPerc = 100 * (data.rvotes / data.totalvotes)
-            dPerc = 100 * (data.dvotes / data.totalvotes)
-            rMarg = 100 * (data.rvotes - data.dvotes) / data.totalvotes
-            WriteHoverTemplate(props.NAME, data.rvotes, rPerc, data.dvotes, dPerc, rMarg, event.event.x, event.event.y)
+            try 
+            {
+                rPerc = 100 * (data.rvotes / data.totalvotes)
+                dPerc = 100 * (data.dvotes / data.totalvotes)
+                rMarg = 100 * (data.rvotes - data.dvotes) / data.totalvotes
+                WriteHoverTemplate(props.NAME, data.rvotes, rPerc, data.dvotes, dPerc, rMarg, event.event.x, event.event.y)
+            } catch (_) // Occurs if county doesn't have data for that year
+            {
+                WriteHoverTemplate(props.NAME, 0, 50, 0, 50, 0, event.event.x, event.event.y)
+            }
         }
         hover_element.classList.remove('hidden')
     }).on('plotly_unhover', function(data) {
