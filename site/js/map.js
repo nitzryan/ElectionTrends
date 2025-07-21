@@ -498,9 +498,8 @@ function CreateMap(should_relocate)
         map_element.on('plotly_buttonclicked', function(data) {
             state_selected = ""
             current_group = null
-            LoadStateGroups()
             CreateMap(true)
-            SetupGroups()
+            UpdateGraph()
         })
 
         // Resize bubbles when zoomed
@@ -542,7 +541,6 @@ function UpdateGroupDropdown()
 
 function LoadStateGroups()
 {
-    // Load groups from cookies (TODO)
     selected_groups = JSON.parse(localStorage.getItem(`groups${state_selected}`))
     if (selected_groups === null)
         selected_groups = [{name: 'Group1', counties:[], color: group_default_palettes[0]}]
