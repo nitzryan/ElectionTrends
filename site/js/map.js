@@ -3,8 +3,9 @@ state_selected = ""
 county_map = null
 current_group = null
 us_map_data = null
+graph_group_mode = 'single'
 
-let year_dict = {
+const year_dict = {
     2024: 0,
     2020: 1,
     2016: 2,
@@ -16,6 +17,114 @@ let year_dict = {
 let year_idx = year_dict[2024]
 const marker_sizeref_scale = 0.15
 let map_visibility = [true, false, true, false, false]
+
+// const state_names = {
+//     1:        "ALABAMA",
+//     2:        "ALASKA",
+//     4:        "ARIZONA",
+//     5:        "ARKANSAS",
+//     6:        "CALIFORNIA",
+//     8:        "COLORADO",
+//     9:        "CONNECTICUT",
+//     10:        "DELAWARE",
+//     11:        "DISTRICT OF COLUMBIA",
+//     12:        "FLORIDA",
+//     13:        "GEORGIA",
+//     15:        "HAWAII",
+//     16:        "IDAHO",
+//     17:        "ILLINOIS",
+//     18:        "INDIANA",
+//     19:        "IOWA",
+//     20:        "KANSAS",
+//     21:        "KENTUCKY",
+//     22:        "LOUISIANA",
+//     23:        "MAINE",
+//     24:        "MARYLAND",
+//     25:        "MASSACHUSETTS",
+//     26:        "MICHIGAN",
+//     27:        "MINNESOTA",
+//     28:        "MISSISSIPPI",
+//     29:        "MISSOURI",
+//     30:        "MONTANA",
+//     31:        "NEBRASKA",
+//     32:        "NEVADA",
+//     33:        "NEW HAMPSHIRE",
+//     34:        "NEW JERSEY",
+//     35:        "NEW MEXICO",
+//     36:        "NEW YORK",
+//     37:        "NORTH CAROLINA",
+//     38:        "NORTH DAKOTA",
+//     39:        "OHIO",
+//     40:        "OKLAHOMA",
+//     41:        "OREGON",
+//     42:        "PENNSYLVANIA",
+//     44:        "RHODE ISLAND",
+//     45:        "SOUTH CAROLINA",
+//     46:        "SOUTH DAKOTA",
+//     47:        "TENNESSEE",
+//     48:        "TEXAS",
+//     49:        "UTAH",
+//     50:        "VERMONT",
+//     51:        "VIRGINIA",
+//     53:        "WASHINGTON",
+//     54:        "WEST VIRGINIA",
+//     55:        "WISCONSIN",
+//     56:        "WYOMING",
+// }
+const state_names = {
+    1: "Alabama",
+    2: "Alaska",
+    4: "Arizona",
+    5: "Arkansas",
+    6: "California",
+    8: "Colorado",
+    9: "Connecticut",
+    10: "Delaware",
+    11: "District of Columbia",
+    12: "Florida",
+    13: "Georgia",
+    15: "Hawaii",
+    16: "Idaho",
+    17: "Illinois",
+    18: "Indiana",
+    19: "Iowa",
+    20: "Kansas",
+    21: "Kentucky",
+    22: "Louisiana",
+    23: "Maine",
+    24: "Maryland",
+    25: "Massachusetts",
+    26: "Michigan",
+    27: "Minnesota",
+    28: "Mississippi",
+    29: "Missouri",
+    30: "Montana",
+    31: "Nebraska",
+    32: "Nevada",
+    33: "New Hampshire",
+    34: "New Jersey",
+    35: "New Mexico",
+    36: "New York",
+    37: "North Carolina",
+    38: "North Dakota",
+    39: "Ohio",
+    40: "Oklahoma",
+    41: "Oregon",
+    42: "Pennsylvania",
+    44: "Rhode Island",
+    45: "South Carolina",
+    46: "South Dakota",
+    47: "Tennessee",
+    48: "Texas",
+    49: "Utah",
+    50: "Vermont",
+    51: "Virginia",
+    53: "Washington",
+    54: "West Virginia",
+    55: "Wisconsin",
+    56: "Wyoming",
+};
+
 
 const group_default_palettes = ['#001d5c','#4c206b','#811e6f','#af206a','#d6335c','#f15448','#ff7c2e','#ffa600']
 
@@ -192,37 +301,42 @@ function UpdateLineplot(groupList, plotType)
         }
 
         tickvals = []
-        for (let i = 0; i < 21; i++)
-                tickvals.push(i * 0.1 - 1)
+        for (let i = 0; i < 41; i++)
+                tickvals.push(i * 0.05 - 1)
         if (plotType == 'state_voteshare')
         {
             y = ys.map(f => f.vote_perc)
-            map_fn = f => (f * 100).toFixed(1).toLocaleString() + '%'
+            map_fn = f => (f * 100).toFixed(2).toLocaleString() + '%'
             use_tickvals = true
+            chart_title = "State Voteshare"
         }
         else if (plotType == 'state_marginshare')
         {
             y = ys.map(f => f.r_marg)
-            map_fn = f => f > 0 ? `R+${(f * 100).toFixed(1)}` : `D+${(f * -100).toFixed(1)}`
+            map_fn = f => f > 0 ? `R+${(f * 100).toFixed(2)}` : `D+${(f * -100).toFixed(2)}`
             use_tickvals = true
+            chart_title = "State Marginshare"
         }
         else if (plotType == 'net_votes')
         {
             y = ys.map(f => f.rvotes - f.dvotes)
             map_fn = f => f.toLocaleString()
             use_tickvals = false
+            chart_title = "Net Votes"
         }
         else if (plotType == 'net_margin')
         {
             y = ys.map(f => (f.rvotes - f.dvotes) / f.totalvotes)
             map_fn = f => f > 0 ? `R+${(f * 100).toFixed(1)}` : `D+${(f * -100).toFixed(1)}`
             use_tickvals = true
+            chart_title = "Net Margin"
         }
         else if (plotType == 'total_votes')
         {
             y = ys.map(f => f.totalvotes)
             map_fn = f => f.toLocaleString()
             use_tickvals = false
+            chart_title = "Total Votes"
         }
         else 
             return
@@ -238,17 +352,24 @@ function UpdateLineplot(groupList, plotType)
             customdata: customdata,
             hovertemplate: '%{customdata}',
             marker: {
-                color: group.color,
+                color: group.color.slice(0,7) + 'FF',
             },
         })
     }
 
     var layout = {
+        title: {
+            text: chart_title,
+            font: {
+                size: 40,
+            }
+        },
         xaxis: {
             tickvals: Object.keys(year_dict)
         },
         plot_bgcolor: '#111111',
         paper_bgcolor: '#111111',
+        showlegend: true,
     }
     if (use_tickvals)
     {
@@ -333,7 +454,15 @@ function CreateMap(should_relocate)
 
         // Map of currently highlighted counties so their borders are drawn on top
         highlighted_locations = selected_state_counties.features.map(f => f.id)
-        highlighted_locations = highlighted_locations.filter(f => current_group.counties.includes(f))
+        try {
+            highlighted_locations = highlighted_locations.filter(f => current_group.counties.includes(f))
+            highlight_color = current_group.color
+        } catch (_) // No current group, so don't have any highlights
+        {
+            highlighted_locations = []
+            highlight_color = '#00000000'
+        }
+        
         us_map_data.push({
             type: 'choropleth',
             geojson: selected_state_counties,
@@ -344,7 +473,7 @@ function CreateMap(should_relocate)
             showscale: false,
             marker: {
                 line: {
-                    color: current_group.color,
+                    color: highlight_color,
                     width: 4,
                 },
             },
@@ -490,8 +619,13 @@ function CreateMap(should_relocate)
             
             state_selected = event.points[0].properties.id
             hover_element.classList.add('hidden')
-            LoadStateGroups()
+            
             CreateMap(true)
+            if (graph_group_mode == 'single')
+                LoadStateAsGroup()
+            else
+                LoadStateGroups()
+            
             SetupGroups()
         })
 
@@ -546,6 +680,21 @@ function LoadStateGroups()
         selected_groups = [{name: 'Group1', counties:[], color: group_default_palettes[0]}]
     current_group_idx = 0
     current_group = selected_groups[current_group_idx]
+    group_selector.classList.remove('hidden')
+}
+
+function LoadStateAsGroup()
+{
+    selected_groups = [{
+        name: state_names[Number(state_selected)], 
+        counties:county_map.features.filter(f => f.properties.STATE == state_selected).map(f => f.id), 
+        color: '#DDDDDD00'
+    }]
+
+    current_group_idx = 0
+    current_group = selected_groups[current_group_idx]
+
+    group_selector.classList.add('hidden')
 }
 
 function StoreStateGroups()
@@ -557,12 +706,28 @@ function HandleCountyClick(event)
 {
     id = event.points[0].location
     
-    if (current_group.counties.includes(id))
-        current_group.counties = current_group.counties.filter(f => f != id)
-    else
-        current_group.counties.push(id)
+    if (graph_group_mode == 'single')
+    {
+        if (current_group.counties.length == 1 && current_group.counties[0] == id)
+        {
+            LoadStateAsGroup()
+        } else {
+            current_group.counties = [id]
+            current_group.color = '#DDDDDDFF'
+            datapoint = selected_state_counties.features.filter(f => f.id == id)[0].properties
+            current_group.name = datapoint.NAME + " " + datapoint.LSAD
+        }
+    } else if (graph_group_mode == 'group')
+    {
+        if (current_group.counties.includes(id))
+            current_group.counties = current_group.counties.filter(f => f != id)
+        else
+            current_group.counties.push(id)
 
-    StoreStateGroups()
+        StoreStateGroups()
+    }
+    
+    
     UpdateGraph()
     UpdateHighlights()
 }
@@ -600,7 +765,7 @@ function GetCountyWidth(county_id)
 
 function UpdateGraph()
 {
-    if (!selected_groups.reduce((any_found, current_list) => any_found || current_list.counties.length > 0, false))
+    if (current_group == null)
     {
         group_viewer.classList.add('hidden')
         return
@@ -621,7 +786,7 @@ function SetupGraphDropdowns()
         current_group_idx = graph_group_select.value
         current_group = selected_groups[current_group_idx]
         input_group_name.value = current_group.name
-        input_group_color.value = current_group.color
+        input_group_color.value = current_group.color.slice(0,7)
         UpdateHighlights()
     })
 
@@ -669,8 +834,28 @@ function SetupGroupControl()
     })
 }
 
+function SetupEntitySelector()
+{
+    entity_selector = document.getElementById('entity_selector_select')
+    entity_selector.addEventListener('change', () => {
+        graph_group_mode = entity_selector.value
+
+        if (graph_group_mode == 'single' && state_selected > 0)
+        {
+            LoadStateAsGroup()
+            SetupGroups()
+        }
+        else if (graph_group_mode == 'group' && state_selected > 0)
+        {
+            LoadStateGroups()
+            SetupGroups()
+        }
+    })
+}
+
 async function main()
 {
+    group_selector = document.getElementById('group_selector')
     group_viewer = document.getElementById('group_viewer')
     graph_group_select = document.getElementById('graph_group_select')
     input_group_name = document.getElementById('input_group_name')
@@ -684,6 +869,7 @@ async function main()
     SetupMapModeDropdown()
     SetupGraphDropdowns()
     SetupGroupControl()
+    SetupEntitySelector()
 }
 
 main()

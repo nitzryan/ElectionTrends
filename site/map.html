@@ -40,26 +40,35 @@
             <div id="tooltip_net_votes" class="votecount"></div>
         </div>
 
-        <div id="group_viewer" class="hidden">
-            <div id="group_selector">
-                Groups
-                <select name="graph_group_select" id="graph_group_select"></select>
-                <button id="button_add_group">Add Group</button>
-                <button id="button_delete_group">Delete Group</button>
-                <input type="text" id="input_group_name" value="">
-                <input type="color" id="input_group_color">
-            </div>
-            <div id="graph_selector">
-                <select name="graph_type_select" id="graph_type_select">
-                    <option value="net_votes">Net Votes</option>
-                    <option value="net_margin">Net Margin</option>
-                    <option value="total_votes">Total Votes</option>
-                    <option value="state_voteshare">State Voteshare</option>
-                    <option value="state_marginshare">State Marginshare</option>
+        <div id="selection_viewer">
+            <div id="entity_selector">
+                <select name="group_single_select" id="entity_selector_select">
+                    <option value="single">Single</option>
+                    <option value="group">Group</option>
                 </select>
-                
             </div>
-            <div id="group_graph"></div>
+            <div id="group_viewer" class="hidden">
+                <div id="group_selector">
+                    Groups
+                    <select name="graph_group_select" id="graph_group_select"></select>
+                    <button id="button_add_group">Add Group</button>
+                    <button id="button_delete_group">Delete Group</button>
+                    <input type="text" id="input_group_name" value="">
+                    <input type="color" id="input_group_color">
+                </div>
+                <div id="graph_selector">
+                    <select name="graph_type_select" id="graph_type_select">
+                        <option value="net_votes">Net Votes</option>
+                        <option value="net_margin">Net Margin</option>
+                        <option value="total_votes">Total Votes</option>
+                        <option value="state_voteshare">State Voteshare</option>
+                        <option value="state_marginshare">State Marginshare</option>
+                    </select>
+                    
+                </div>
+                <div id="group_graph"></div>
+            </div>
         </div>
+        
     </body>
 </html>
