@@ -49,12 +49,22 @@
             </div>
             <div id="group_viewer" class="hidden">
                 <div id="group_selector">
-                    Groups
-                    <select name="graph_group_select" id="graph_group_select"></select>
+                    <div class="vertical_flex">
+                        Groups
+                        <select name="graph_group_select" id="graph_group_select"></select>
+                    </div>
                     <button id="button_add_group">Add Group</button>
                     <button id="button_delete_group">Delete Group</button>
                     <input type="text" id="input_group_name" value="">
                     <input type="color" id="input_group_color">
+                    <div id="group_missing_counties" class="vertical_flex">
+                        Missing Counties
+                        <ul id="group_missing_counties_list" class="missing_list"></ul>
+                    </div>
+                    <div id="group_double_counties" class="vertical_flex">
+                        Double Counties
+                        <ul id="group_double_counties_list" class="missing_list"></ul>
+                    </div>
                 </div>
                 <div id="graph_selector">
                     <select name="graph_type_select" id="graph_type_select">

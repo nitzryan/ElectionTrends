@@ -17,60 +17,6 @@ const year_dict = {
 let year_idx = year_dict[2024]
 const marker_sizeref_scale = 0.15
 let map_visibility = [true, false, true, false, false]
-
-// const state_names = {
-//     1:        "ALABAMA",
-//     2:        "ALASKA",
-//     4:        "ARIZONA",
-//     5:        "ARKANSAS",
-//     6:        "CALIFORNIA",
-//     8:        "COLORADO",
-//     9:        "CONNECTICUT",
-//     10:        "DELAWARE",
-//     11:        "DISTRICT OF COLUMBIA",
-//     12:        "FLORIDA",
-//     13:        "GEORGIA",
-//     15:        "HAWAII",
-//     16:        "IDAHO",
-//     17:        "ILLINOIS",
-//     18:        "INDIANA",
-//     19:        "IOWA",
-//     20:        "KANSAS",
-//     21:        "KENTUCKY",
-//     22:        "LOUISIANA",
-//     23:        "MAINE",
-//     24:        "MARYLAND",
-//     25:        "MASSACHUSETTS",
-//     26:        "MICHIGAN",
-//     27:        "MINNESOTA",
-//     28:        "MISSISSIPPI",
-//     29:        "MISSOURI",
-//     30:        "MONTANA",
-//     31:        "NEBRASKA",
-//     32:        "NEVADA",
-//     33:        "NEW HAMPSHIRE",
-//     34:        "NEW JERSEY",
-//     35:        "NEW MEXICO",
-//     36:        "NEW YORK",
-//     37:        "NORTH CAROLINA",
-//     38:        "NORTH DAKOTA",
-//     39:        "OHIO",
-//     40:        "OKLAHOMA",
-//     41:        "OREGON",
-//     42:        "PENNSYLVANIA",
-//     44:        "RHODE ISLAND",
-//     45:        "SOUTH CAROLINA",
-//     46:        "SOUTH DAKOTA",
-//     47:        "TENNESSEE",
-//     48:        "TEXAS",
-//     49:        "UTAH",
-//     50:        "VERMONT",
-//     51:        "VIRGINIA",
-//     53:        "WASHINGTON",
-//     54:        "WEST VIRGINIA",
-//     55:        "WISCONSIN",
-//     56:        "WYOMING",
-// }
 const state_names = {
     1: "Alabama",
     2: "Alaska",
@@ -126,8 +72,8 @@ const state_names = {
 };
 
 
-const group_default_palettes = ['#001d5c','#4c206b','#811e6f','#af206a','#d6335c','#f15448','#ff7c2e','#ffa600']
-
+//const group_default_palettes = ['#001d5c','#4c206b','#811e6f','#af206a','#d6335c','#f15448','#ff7c2e','#ffa600']
+const group_default_palettes = ['#004400','#316127','#577e4b','#7d9d71','#a3bd98','#cbdec2','#f3ffed']
 // Map indices
 const US_MAP_IDX = 0
 const STATE_MAP_MARGINS_IDX = 1
@@ -710,6 +656,8 @@ function LoadStateGroups()
     current_group_idx = 0
     current_group = selected_groups[current_group_idx]
     group_selector.classList.remove('hidden')
+
+    ValidateGroup()
 }
 
 function LoadStateAsGroup()
@@ -729,6 +677,56 @@ function LoadStateAsGroup()
 function StoreStateGroups()
 {
     localStorage.setItem(`groups${state_selected}`, JSON.stringify(selected_groups))
+}
+
+function ValidateGroup()
+{
+    // Find counties in the state that are not in a group or in 2 groups
+    ids = selected_state_counties.features.map(f => f.id)
+    missing_ids = []
+    double_ids = []
+    for (const id of ids)
+    {
+        num_found = 0
+        for (const group of selected_groups)
+        {
+            if (group.counties.includes(id))
+            {
+                num_found++
+            }
+        }
+
+        if (num_found == 0)
+            missing_ids.push(id)
+        else if (num_found > 1)
+            double_ids.push(id)
+    }
+
+    missing_children = missing_ids.map(id => {
+        el = document.createElement('li')
+        county = selected_state_counties.features.filter(f => f.id == id)[0].properties
+        el.innerHTML = county.NAME + ' ' + county.LSAD
+        return el
+    })
+
+    double_children = double_ids.map(id => {
+        el = document.createElement('li')
+        county = selected_state_counties.features.filter(f => f.id == id)[0].properties
+        el.innerHTML = county.NAME + ' ' + county.LSAD
+        return el
+    })
+
+    group_missing_counties_list.replaceChildren(...missing_children)
+    if (missing_children.length > 0)
+        group_missing_counties.classList.remove('hidden')
+    else
+        group_missing_counties.classList.add('hidden')
+
+    group_double_counties_list.replaceChildren(...double_children)
+    if (double_children.length > 0)
+        group_double_counties.classList.remove('hidden')
+    else
+        group_double_counties.classList.add('hidden')
 }
 
 function HandleCountyClick(event)
@@ -756,7 +754,7 @@ function HandleCountyClick(event)
         StoreStateGroups()
     }
     
-    
+    ValidateGroup()
     UpdateGraph()
     UpdateHighlights()
 }
@@ -891,6 +889,10 @@ async function main()
     button_add_group = document.getElementById('button_add_group')
     button_delete_group = document.getElementById('button_delete_group')
     input_group_color = document.getElementById('input_group_color')
+    group_missing_counties_list = document.getElementById('group_missing_counties_list')
+    group_missing_counties = document.getElementById('group_missing_counties')
+    group_double_counties_list = document.getElementById('group_double_counties_list')
+    group_double_counties = document.getElementById('group_double_counties')
 
     SetupYearDropdown()
     await GetMaps()
