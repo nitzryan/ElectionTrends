@@ -274,6 +274,8 @@ function ApplyColorscale(colorscale, value)
 function UpdateLineplot(groupList, plotType)
 {
     var traces = []
+    min_y = 100
+    max_y = -100
     for(const group of groupList)
     {
         counties = county_map.features.filter(f => group.counties.includes(f.id))
@@ -300,9 +302,7 @@ function UpdateLineplot(groupList, plotType)
             }
         }
 
-        tickvals = []
-        for (let i = 0; i < 41; i++)
-                tickvals.push(i * 0.05 - 1)
+        
         if (plotType == 'state_voteshare')
         {
             y = ys.map(f => f.vote_perc)
@@ -342,7 +342,6 @@ function UpdateLineplot(groupList, plotType)
             return
 
         customdata = y.map(map_fn)
-        ticktext = tickvals.map(map_fn)
 
         traces.push({
             x: xs,
@@ -355,7 +354,16 @@ function UpdateLineplot(groupList, plotType)
                 color: group.color.slice(0,7) + 'FF',
             },
         })
+
+        max_y = Math.max(max_y, 0, ...y)
+        min_y = Math.min(min_y, 0, ...y)
     }
+
+    // Stretch range so that values aren't partially cut off at extremes, while not breaking scales
+    if (min_y > -0.9 || !use_tickvals)
+        min_y *= 1.1
+    if (max_y < 0.9 || !use_tickvals)
+        max_y *= 1.1
 
     var layout = {
         title: {
@@ -367,16 +375,37 @@ function UpdateLineplot(groupList, plotType)
         xaxis: {
             tickvals: Object.keys(year_dict)
         },
+        yaxis: {
+            range: [(min_y - 0.00049).toFixed(3), (max_y + 0.00049).toFixed(3)],
+        },
         plot_bgcolor: '#111111',
         paper_bgcolor: '#111111',
         showlegend: true,
     }
+
+    // Prevent scaling error if both range values are '0.000'
+    chart_range = Number(layout.yaxis.range[1] - layout.yaxis.range[0])
+    if (chart_range < 0.001)
+    {
+        layout.yaxis.range = ['-0.001', '0.001']
+        chart_range = Number(layout.yaxis.range[1] - layout.yaxis.range[0])
+    }
+    
+    // Apply custom y axis values, only at nice points even if not evenly spaced
     if (use_tickvals)
     {
-        layout.yaxis = {
-                tickvals: tickvals,
-                ticktext: ticktext,
+        tickvals = []
+        for (let i = 0; i <= 5; i++)
+        {
+            // Get evenly spaced, but move each point to the nearest round number
+            let y = Number(layout.yaxis.range[0]) + chart_range * (i / 5)
+            y = y.toFixed(3)
+            tickvals.push(y)
         }
+        ticktext = tickvals.map(map_fn)
+
+        layout.yaxis.tickvals = tickvals
+        layout.yaxis.ticktext = ticktext
     }
 
     group_graph = document.getElementById('group_graph')
