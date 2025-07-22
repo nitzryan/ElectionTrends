@@ -360,8 +360,6 @@ function UpdateLineplot(groupList, plotType)
 
 function CreateMap(should_relocate)
 {
-    map_element = document.getElementById('map')
-    
     shown_features = us_state_json.features.filter(f => f.id != state_selected)
     const locations = shown_features.map(f => f.properties.name)
     const results = shown_features.map(f => f.properties.data[year_idx]["R+"])
@@ -880,6 +878,11 @@ function SetupEntitySelector()
     })
 }
 
+function MapResize()
+{
+    Plotly.Plots.resize(map_element)
+}
+
 async function main()
 {
     group_selector = document.getElementById('group_selector')
@@ -893,6 +896,10 @@ async function main()
     group_missing_counties = document.getElementById('group_missing_counties')
     group_double_counties_list = document.getElementById('group_double_counties_list')
     group_double_counties = document.getElementById('group_double_counties')
+    map_element = document.getElementById('map')
+
+    map_observer = new ResizeObserver(MapResize)
+    map_observer.observe(map_element)
 
     SetupYearDropdown()
     await GetMaps()
